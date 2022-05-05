@@ -19,14 +19,14 @@ func main(){
 	defer forumDB.Close() // defer closing the database
 
 	// create tables into database
-	// SQLUser.CreateUserTable(forumDB) 
-	SQLTables.CreateContent(forumDB)
+	// SQLTables.CreateUserTable(forumDB) 
+	// SQLTables.CreateContent(forumDB)
 	//insert data into tables
-	// SQLUser.InsertUser(forumDB,"miguel","124")
+	SQLTables.InsertUser(forumDB,"miguelh","habibi@hotmail.comm","123123","jason","derulo")
 	// insertContent()
 	//display table fields 
 	SQLTables.DisplayUser(forumDB)
-	SQLTables.DisplayContent(forumDB)
+	// SQLTables.DisplayContent(forumDB)
 }
 
 
