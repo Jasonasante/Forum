@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <form action="/homepage"  method="POST" style="border:1px solid #ccc">
+        <div class="container">
+          <h1>Log In</h1>
+          <hr>
+          <label for="Username"><b>Username</b></label>
+          <input type="text" placeholder="Enter Username" name="usernameL" required>
+          <br>
+          <br>
+          <label for="psw"><b>Password</b></label>
+          <input type="password" placeholder="Enter Password" name="pswL" required > 
+          <br>
+          <br>
+          <div class="clearfix">
+            <button type="submit" class="loginbtn">Log In</button>
+          </div>
+        </div>
+      </form> 
+      <form action="/signup">
+        <p>Haven't registered?</p>
+        <button type="submit" class="signupbtn">Sign Up</button>
+    </form>
+</body>
+</html>
