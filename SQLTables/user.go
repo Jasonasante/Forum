@@ -3,10 +3,16 @@ package SQLTables
 import (
 	"database/sql"
 	"log"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func CreateUserTable(db *sql.DB) {
-	createUserSQLTable := "CREATE TABLE IF NOT EXISTS user(userID integer NOT NULL PRIMARY KEY AUTOINCREMENT,username varchar(50) UNIQUE NOT NULL,password varchar(50) NOT NULL,image TEXT)"
+	createUserSQLTable :=  `CREATE TABLE user (
+		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,		
+		"username" TEXT UNIQUE,
+		"password" TEXT		
+	  );` // SQL Statement for Create Table
+
 	log.Println("Create user table...")
 	statement, err := db.Prepare(createUserSQLTable) //prepare SQL statement
 	if err != nil {
@@ -16,15 +22,15 @@ func CreateUserTable(db *sql.DB) {
 	log.Println("user table created")
 }
 
-func InsertUser(db *sql.DB, username string, password string, image string) {
+func InsertUser(db *sql.DB, username string, password string) {
 	log.Println("Inserting user record ...")
-	insertUserSQL := `INSERT INTO user(username, password, image)
-	VALUES(?, ?, ?)`
+	insertUserSQL := `INSERT INTO user(username, password)
+	VALUES(?, ?)`
 	statement, err := db.Prepare(insertUserSQL) // prepare SQL statement
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	_, err = statement.Exec(username, password, image)
+	_, err = statement.Exec(username, password)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

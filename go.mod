@@ -1,4 +1,4 @@
-module git.learn.01founders.co/gymlad/forum.git
+module forum
 
 go 1.17
 

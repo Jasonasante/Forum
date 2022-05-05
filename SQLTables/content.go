@@ -3,10 +3,20 @@ package SQLTables
 import (
 	"database/sql"
 	"log"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func CreateContent(db *sql.DB) {
-	createContentTable := "CREATE TABLE IF NOT EXISTS content(idContent INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,categories TEXT,comments TEXT,imagesURL TEXT,likes INTEGER,dislikes INTEGER)"
+	createContentTable := `CREATE TABLE content(
+	"idContent" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"categories" TEXT,
+	"comments" TEXT,
+	"imagesURL" TEXT,
+	"likes" integer,
+	"dislikes" integer,
+	FOREIGN KEY (id) 
+		REFERENCES user(id)
+	);`
 	log.Println("Create content table ...")
 	statement, err := db.Prepare(createContentTable)
 	if err != nil {
