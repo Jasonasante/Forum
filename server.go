@@ -8,18 +8,36 @@ import (
 	"net/http"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
-/*type signUp struct {
-	Email    string
-	Password string
-}*/
+type User struct {
+	User string
+}
+
+type ErrorMes struct {
+	En interface{}
+	Em string
+}
 
 var (
 	database *sql.DB
 	stmt     *sql.Stmt
 )
 
+//this receives a password and encrypts it, protect a user's password in the database.
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+//this checks whether the inputted string when trying to login matches the encrypted password
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+//this determines wither an E-mail exists in the database
 func emailExists(email string) bool {
 	row := database.QueryRow("SELECT email from user where email= ?", email)
 	temp := ""
@@ -30,6 +48,7 @@ func emailExists(email string) bool {
 	return false
 }
 
+//this determines wither an username exists in the database
 func usernameExists(username string) bool {
 	row := database.QueryRow("SELECT username from user where username= ?", username)
 	temp := ""
@@ -40,6 +59,7 @@ func usernameExists(username string) bool {
 	return false
 }
 
+//this sends the inputs in the registration from to the username handleFunc.
 func signUp(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/signup" {
 		log.Fatal()
@@ -49,6 +69,7 @@ func signUp(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 
+//this receives input from the sign up page and inserts the new user information into the database if the username and email does not exist already.
 func username(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/username" {
 		log.Fatal()
@@ -69,7 +90,8 @@ func username(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Uh oh Try again, username and email already exists!")
 	} else {
 		stmt, _ = database.Prepare("INSERT INTO user(username,email,password, fname, lname) VALUES(?,?,?,?,?)")
-		stmt.Exec(username, email, password, fname, lname)
+		hash, _ := HashPassword(password)
+		stmt.Exec(username, email, hash, fname, lname)
 	}
 
 	row, _ := database.Query("SELECT * from user")
@@ -92,6 +114,7 @@ func username(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 
+//this sends the inputs from the log in form to the homePage handleFunc.
 func logIn(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/login" {
 		log.Fatal()
@@ -100,42 +123,56 @@ func logIn(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 
+//this receives the inputs from the log in page and confirms whether the user exists and if the password matches to what is stored in the database determining access to the web page.
 func homePage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/homePage" {
+	if r.URL.Path != "/homepage" {
 		log.Fatal()
 	}
 	r.ParseForm()
 	email_user := r.FormValue("usernameL")
 	password := r.FormValue("pswL")
 	var (
-		u string
-		p string
+		u    string
+		hash string
 	)
-	if usernameExists(email_user) {
-		row, _ := database.Query("SELECT username from user where username=? OR", email_user)
-		for row.Next() {
-			row.Scan(&u, &p)
-			fmt.Println("username:= " + u + " password:= " + p)
-		}
-	} else {
-		fmt.Fprint(w, "username does not exist!")
+	//this method returns a single row of the information requested within the query that corresponds with the identification key used (i.e username) if it exists
+	//It then stores the request information in the corresponding variable addresses. Once we check verify that that user exists and the passwords match,we send user to the homepage.
+	row := database.QueryRow("SELECT username, password from user WHERE username= ?", email_user)
+	switch err := row.Scan(&u, &hash); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+		// send to a 404 or username error page?? But their might be duplication of template.
+	case nil:
+		fmt.Print(u + " Info Found ")
+	default:
+		panic(err)
 	}
-	if p == password {
+	if !CheckPasswordHash(password, hash) {
+		em := "Username or Password incorrect !! Please try again"
+		t, _ := template.ParseFiles("./templates/errorLogin.html")
+		t.Execute(w, ErrorMes{Em: em})
+	} else {
+		fmt.Println("Password Match! Access granted.")
 		t, _ := template.ParseFiles("./templates/homePage.html")
-		t.Execute(w, nil)
-	} else {
-		fmt.Fprint(w, "Password is incorrect")
+		t.Execute(w, User{User: u})
 	}
+
 }
 
-func main() {
+//this initialises a test sqlite database and creates a table containing user information.
+func TestDB() {
 	database, _ = sql.Open("sqlite3", "test.db")
 	stmt, _ = database.Prepare("CREATE TABLE IF NOT EXISTS user (username TEXT, email TEXT, password TEXT, fname TEXT, lname TEXT)")
 	stmt.Exec()
+}
+func main() {
+	TestDB()
+	http.HandleFunc("/homepage", homePage)
 	http.HandleFunc("/username", username)
 	http.HandleFunc("/login", logIn)
 	http.HandleFunc("/signup", signUp)
-	fmt.Println("hello")
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	fmt.Println("Starting Server")
+	fmt.Println("Please open http://localhost:8080/signup")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 	fmt.Println("error")
 }
