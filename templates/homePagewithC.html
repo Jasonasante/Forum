@@ -8,6 +8,10 @@
 </head>
 <body>
     <h1>Homepage</h1>
+    <img src="{{.Image}}" alt="dP" width="200" height="100" >
     <h2>Welcome {{.User}}</h2>
+    <form action="/Logout" method="POST">
+        <button type="submit" class="loginbtn">Log Out</button>
+        </form> 
 </body>
 </html>

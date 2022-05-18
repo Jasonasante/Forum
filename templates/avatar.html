@@ -7,15 +7,16 @@
     <title>Choose Your Avatar</title>
 </head>
 <body>
-    <form action="/"  method="POST" style="border:1px solid #ccc">
-        <div class="container">
-          <h1>Choose a username</h1>
-          <label for="username"><b>username</b></label>
-          <input type="text" placeholder="Enter Username" name="username" required>
-          <div class="clearfix">
-         <button type="submit" class="submit">Submit</button>
-          </div>
-        </div>
-      </form> 
+  <h1>Choose Your Image</h1>
+  <form
+      enctype="multipart/form-data"
+      action="/upload"
+      method="POST"
+    >
+      <input type="file" name="myFile" />
+      <div class="clearfix">
+        <button type="submit" class="submit">Submit</button>
+         </div>
+    </form>
 </body>
 </html>
