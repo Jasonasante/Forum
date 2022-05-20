@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	users "forum/SQLTables/Users"
@@ -408,30 +409,30 @@ func AlreadyLoggedIn(r *http.Request) bool {
 // 	}
 // }
 
-// func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	if s.Username == "" {
-// 		http.Redirect(w, r, "/", http.StatusFound)
-// 	}
-// 	items := PostsTable.Get(LikesDislikesTable)
-// 	id := strings.TrimPrefix(r.URL.RequestURI(), "/edit?")
-// 	var item posts.PostFields
-
-// 	for _, v := range items {
-// 		if v.Id == id {
-// 			item = v
-// 		}
-// 	}
-// 	t, err := template.ParseFiles("template/newpost.html", "template/header.html", "template/footer.html")
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	data := Info{
-// 		Sess: s,
-// 		Post: item,
-// 	}
-// 	t.ExecuteTemplate(w, "newpost", data)
-// }
+func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	if s.Username == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+	items := PostsTable.Get(LikesDislikesTable)
+	id := strings.TrimPrefix(r.URL.RequestURI(), "/edit?")
+	var item posts.PostFields
+	for _, v := range items {
+		if v.Id == id {
+			item = v
+		}
+	}
+	fmt.Println("POSTs2")
+	t, err := template.ParseFiles("./templates/newpost.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	data := Info{
+		Sess: s,
+		Post: item,
+	}
+	t.Execute(w, data)
+}
 
 // func LikeDislikecom(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 // 	if !s.IsAuthorized {
@@ -573,6 +574,11 @@ func AlreadyLoggedIn(r *http.Request) bool {
 func initDB() {
 	db, _ := sql.Open("sqlite3", "forumDataBase.db")
 	UserTable = users.CreateUserTable(db)
+	CommentTable =comments.NewCommentTable(db)
+	LikesDislikesTable= likes.CreateLikesTable(db) 
+	LikesDislikesCommentsTable= commentsAndLikes.CreateLikesAndCommentsTable(db)
+	PostsTable= posts.CreatePostTable(db)
+
 }
 
 func main() {
@@ -582,8 +588,8 @@ func main() {
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir("img"))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 	mux.Handle("/dp-images/", http.StripPrefix("/dp-images/", http.FileServer(http.Dir("./dp-images"))))
-	// mux.HandleFunc("/write", sessions.Middleware(newPost))
-	// mux.HandleFunc("/edit", sessions.Middleware(newPost))
+	mux.HandleFunc("/write", sessions.Middleware(newPost))
+	mux.HandleFunc("/edit", sessions.Middleware(newPost))
 	// mux.HandleFunc("/view", sessions.Middleware(View))
 	// mux.HandleFunc("/comment", sessions.Middleware(View))
 	// mux.HandleFunc("/delete", sessions.Middleware(deletePost))
