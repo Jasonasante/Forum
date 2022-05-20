@@ -265,6 +265,7 @@ type Info struct {
 	Post       posts.PostFields
 	IsAuthor   bool
 	Error      string
+	UserInfo users.UserFields
 }
 
 func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
@@ -309,10 +310,11 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		data = Info{
 			Sess:  s,
 			Posts: items,
+			UserInfo: users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession},
 		}
 		fmt.Println("message board", data)
 		t, _ := template.ParseFiles("./templates/homePagewithC.html")
-		t.Execute(w, users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession})
+		t.Execute(w, data)
 	}
 }
 
@@ -333,81 +335,81 @@ func AlreadyLoggedIn(r *http.Request) bool {
 	return false
 }
 
-// func deletePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	id := strings.TrimPrefix(r.URL.RequestURI(), "/delete?")
-// 	PostsTable.Delete(id)
-// 	http.Redirect(w, r, "/", http.StatusFound)
-// }
+func deletePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	id := strings.TrimPrefix(r.URL.RequestURI(), "/delete?")
+	PostsTable.Delete(id)
+	http.Redirect(w, r, "/", http.StatusFound)
+}
 
-// func savePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	if s.Username == "" {
-// 		http.Redirect(w, r, "/", http.StatusFound)
-// 	}
+func savePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	if s.Username == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
 
-// 	fmt.Println(r.FormValue("content"))
-// 	if r.FormValue("content") != "" {
-// 		if r.FormValue("id") != "" {
-// 			id := r.FormValue("id")
-// 			r.ParseForm()
-// 			var thread string
-// 			threadList := r.Form["thread"]
-// 			if len(threadList) > 1 {
-// 				for i, v := range threadList {
-// 					thread += v
-// 					if i != len(threadList)-1 {
-// 						thread += ":"
-// 					}
+	fmt.Println(r.FormValue("content"))
+	if r.FormValue("content") != "" {
+		if r.FormValue("id") != "" {
+			id := r.FormValue("id")
+			r.ParseForm()
+			var thread string
+			threadList := r.Form["thread"]
+			if len(threadList) > 1 {
+				for i, v := range threadList {
+					thread += v
+					if i != len(threadList)-1 {
+						thread += ":"
+					}
 
-// 				}
-// 			} else {
-// 				thread = threadList[0]
-// 			}
-// 			PostsTable.Update(posts.PostFields{
-// 				Content: r.FormValue("content"),
-// 				Thread:  thread,
-// 			}, id)
-// 		} else {
-// 			r.ParseForm()
-// 			var thread string
-// 			threadList := r.Form["thread"]
-// 			if len(threadList) > 1 {
-// 				for i, v := range threadList {
-// 					thread += v
-// 					if i != len(threadList)-1 {
-// 						thread += ":"
-// 					}
+				}
+			} else {
+				thread = threadList[0]
+			}
+			PostsTable.Update(posts.PostFields{
+				Content: r.FormValue("content"),
+				Thread:  thread,
+			}, id)
+		} else {
+			r.ParseForm()
+			var thread string
+			threadList := r.Form["thread"]
+			if len(threadList) > 1 {
+				for i, v := range threadList {
+					thread += v
+					if i != len(threadList)-1 {
+						thread += ":"
+					}
 
-// 				}
-// 			} else {
-// 				thread = threadList[0]
-// 			}
+				}
+			} else {
+				thread = threadList[0]
+			}
 
-// 			PostsTable.Add(posts.PostFields{
-// 				Id:      sessions.Generate(),
-// 				Author:  s.Username,
-// 				Content: r.FormValue("content"),
-// 				Thread:  thread,
-// 			})
+			PostsTable.Add(posts.PostFields{
+				Id:      sessions.Generate(),
+				Author:  s.Username,
+				Content: r.FormValue("content"),
+				Thread:  thread,
+			})
 
-// 		}
-// 		http.Redirect(w, r, "/", http.StatusFound)
-// 	} else {
-// 		t, err := template.ParseFiles("template/newpost.html", "template/header.html", "template/footer.html")
-// 		if err != nil {
-// 			w.WriteHeader(http.StatusInternalServerError)
-// 			return
-// 		}
-// 		data := Info{
-// 			Sess:  s,
-// 			Error: "You need to write something at least 8 symbols",
-// 			Post: posts.PostFields{
-// 				Content: r.FormValue("content"),
-// 			},
-// 		}
-// 		t.ExecuteTemplate(w, "newpost", data)
+		}
+		http.Redirect(w, r, "/", http.StatusFound)
+	} else {
+		t, err := template.ParseFiles("./templates/newpost.html")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		data := Info{
+			Sess:  s,
+			Error: "Silly Billy Fam! You need to write something!!!",
+			Post: posts.PostFields{
+				Content: r.FormValue("content"),
+			},
+		}
+		t.Execute(w, data)
 
-// 	}
-// }
+	}
+}
 
 func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if s.Username == "" {
@@ -592,8 +594,8 @@ func main() {
 	mux.HandleFunc("/edit", sessions.Middleware(newPost))
 	// mux.HandleFunc("/view", sessions.Middleware(View))
 	// mux.HandleFunc("/comment", sessions.Middleware(View))
-	// mux.HandleFunc("/delete", sessions.Middleware(deletePost))
-	// mux.HandleFunc("/SavePost", sessions.Middleware(savePost))
+	mux.HandleFunc("/delete", sessions.Middleware(deletePost))
+	mux.HandleFunc("/SavePost", sessions.Middleware(savePost))
 	// mux.HandleFunc("/savecomm", sessions.Middleware(SaveComm))
 	// mux.HandleFunc("/deleteCom", sessions.Middleware(DelComm))
 	// mux.HandleFunc("/like", sessions.Middleware(LikeDislike))
