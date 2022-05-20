@@ -24,10 +24,10 @@
           <label for="psw"><b>Password: </b></label>
           <div class="text">
               <img src="/img/password.png" height="20px"/>
-              <input type="password" placeholder="Enter Password" name="psw" id="psw" pattern="(?=.\d)(?=.[a-z])(?=.*[A-Z]).{8,}" required > 
+              <input type="password" placeholder="Enter Password" name="psw" id="psw" pattern="(?=.[a-z])(?=.*[A-Z]).{6,}" required > 
           </div>
           <p class="pswR">
-            Your Password must be between 6-10 characters, at least 1 uppercase character, at least 1 number and 1 Special Character.</p>
+            Your Password at least have 6 characters, 1 uppercase character and 1 number.</p>
           <p class="policy"> By continuing, you are setting up a 01:Forum account and agree to our user agreement and privacy policy. </p>
           <input type="submit" value="Sign Up" id="signUp"></input>
           <a class="log" href="http://localhost:8080/login">Log In!</a>
