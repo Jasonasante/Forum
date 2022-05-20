@@ -3,6 +3,7 @@ package posts
 import (
 	"database/sql"
 	"fmt"
+
 	"forum/SQLTables/likes"
 )
 
@@ -37,7 +38,7 @@ func (postData *PostData) Add(postFields PostFields) {
 	}
 }
 
-func (posts *PostData) Get() []PostFields {
+func (posts *PostData) Get(LD *likes.LikesData) []PostFields {
 	sliceOfPostTableRows := []PostFields{}
 	rows, _ := posts.Data.Query(`
 	SELECT * FROM "posts"
@@ -56,8 +57,8 @@ func (posts *PostData) Get() []PostFields {
 			Author:   author,
 			Content:  content,
 			Thread:   thread,
-			Likes:    likes,
-			Dislikes: dislikes,
+			Likes:    len(LD.Get(id,"l")),
+			Dislikes: len(LD.Get(id,"d")),
 		}
 		sliceOfPostTableRows = append(sliceOfPostTableRows, postTableRows)
 	}
@@ -139,4 +140,14 @@ func (post *PostData) Filter(likesData *likes.LikesData, str string) []PostField
 	}
 	rows.Close()
 	return sliceOfPostRows
+}
+
+func (post *PostData) Delete(id string) {
+	stmt, _ := post.Data.Prepare("DELETE FROM posts WHERE id = ?")
+	stmt.Exec(id)
+}
+
+func (post *PostData) Update(item PostFields, id string) {
+    stmt, _ := post.Data.Prepare(`UPDATE "posts" SET "content" = ?, "thread" = ? WHERE "id" = ?`)
+    stmt.Exec(item.Content, item.Thread, id)
 }
