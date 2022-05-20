@@ -1,8 +1,8 @@
-package Users 
+package users 
 
 type UserFields struct{
 	Username string 
 	Email string 
 	Password string 
-	Picture string 
+	Image string 
 }

@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+body{
+    display:grid;
+    height: 100%;
+    grid-template: 1fr 1fr 1fr/1fr 1fr 1fr;
+    
+}
+.error{
+    grid-row-start:2 ;
+    grid-column-start: 2;
+    text-align: center;
+    color: white;
+    font-family: "Montserrat";
+    font-size: large;
+    background-color: rgb(6, 187, 45);
+    border-radius: 50px;
+    padding: 30px;
+  }
+  

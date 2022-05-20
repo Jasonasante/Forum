@@ -1,4 +1,4 @@
-package Users
+package users
 
 import (
 	"database/sql"
@@ -11,11 +11,11 @@ type UserData struct {
 
 func CreateUserTable(db *sql.DB) *UserData {
 	stmt, _ := db.Prepare(`
-	CREATE TABLE IF NOT EXISTS "users" (
-		"email"	TEXT UNIQUE,
-		"username"	TEXT NOT NULL UNIQUE,
+	CREATE TABLE IF NOT EXISTS "user" (
+		"username"	TEXT UNIQUE,
+		"email"	TEXT NOT NULL UNIQUE,
 		"password"	TEXT NOT NULL,
-		"picture" TEXT NOT NULL,
+		"image" TEXT NOT NULL,
 		PRIMARY KEY("username")
 	);
 `)
@@ -28,9 +28,9 @@ func CreateUserTable(db *sql.DB) *UserData {
 
 func (user *UserData) Add(userFields UserFields) error {
 	stmt, _ := user.Data.Prepare(`
-	INSERT INTO "users" (email, username, password, picture) values (?, ?, ?, ?)
+	INSERT INTO "user" (email, username, password, image) values (?, ?, ?, ?)
 	`)
-	_, err := stmt.Exec(userFields.Email, userFields.Username, userFields.Password, userFields.Picture)
+	_, err := stmt.Exec(userFields.Email, userFields.Username, userFields.Password, userFields.Image)
 	if err != nil {
 		return err
 	}
@@ -40,19 +40,19 @@ func (user *UserData) Add(userFields UserFields) error {
 func (user *UserData) Get() []UserFields {
 	sliceOfUserTableRows := []UserFields{}
 	rows, _ := user.Data.Query(`
-	SELECT * FROM "users"
+	SELECT * FROM "user"
 	`)
 	var email string
 	var username string
 	var password string
-	var picture string 
+	var image string
 	for rows.Next() {
-		rows.Scan(&email, &username, &password, &picture)
+		rows.Scan(&email, &username, &password, &image)
 		userTableRows := UserFields{
 			Email:    email,
 			Username: username,
 			Password: password,
-			Picture: picture,
+			Image:    image,
 		}
 		sliceOfUserTableRows = append(sliceOfUserTableRows, userTableRows)
 	}
@@ -61,20 +61,20 @@ func (user *UserData) Get() []UserFields {
 }
 
 func (user *UserData) GetUser(str string) UserFields {
-	s := fmt.Sprintf("SELECT * FROM users WHERE username = '%v'", str)
+	s := fmt.Sprintf("SELECT * FROM user WHERE username = '%v'", str)
 	rows, _ := user.Data.Query(s)
 	var email string
 	var username string
 	var password string
-	var picture string 
+	var image string
 	var userTableRows UserFields
 	if rows.Next() {
-		rows.Scan(&email, &username, &password)
+		rows.Scan(&email, &username, &password, &image)
 		userTableRows = UserFields{
 			Email:    email,
 			Username: username,
 			Password: password,
-			Picture: picture,
+			Image:    image,
 		}
 	}
 	rows.Close()
@@ -82,7 +82,7 @@ func (user *UserData) GetUser(str string) UserFields {
 }
 
 func (user *UserData) UpdateUsername(username string, userFields *UserFields) {
-	stmt, _ := user.Data.Prepare(`UPDATE "users" SET "username" = ?,)`)
+	stmt, _ := user.Data.Prepare(`UPDATE "user" SET "username" = ?,)`)
 	_, err := stmt.Exec(username)
 	if err != nil {
 		fmt.Println(err)
@@ -91,7 +91,7 @@ func (user *UserData) UpdateUsername(username string, userFields *UserFields) {
 }
 
 func (user *UserData) UpdateEmail(email string, userFields *UserFields) {
-	stmt, _ := user.Data.Prepare(`UPDATE "users" SET "email" = ?,)`)
+	stmt, _ := user.Data.Prepare(`UPDATE "user" SET "email" = ?,)`)
 	_, err := stmt.Exec(email)
 	if err != nil {
 		fmt.Println(err)
@@ -100,7 +100,7 @@ func (user *UserData) UpdateEmail(email string, userFields *UserFields) {
 }
 
 func (user *UserData) UpdatePassword(password string, userFields *UserFields) {
-	stmt, _ := user.Data.Prepare(`UPDATE "users" SET "password" = ?,)`)
+	stmt, _ := user.Data.Prepare(`UPDATE "user" SET "password" = ?,)`)
 	_, err := stmt.Exec(password)
 	if err != nil {
 		fmt.Println(err)
@@ -109,7 +109,7 @@ func (user *UserData) UpdatePassword(password string, userFields *UserFields) {
 }
 
 func (user *UserData) DeleteUser(userFields *UserFields) {
-	stmt, _ := user.Data.Prepare(`DELETE FROM "users WHERE "username" = ?, password = ?, "email" = ?`)
+	stmt, _ := user.Data.Prepare(`DELETE FROM "user WHERE "username" = ?, password = ?, "email" = ?`)
 	_, err := stmt.Exec(userFields.Username, userFields.Password, userFields.Email)
 	if err != nil {
 		fmt.Println(err)

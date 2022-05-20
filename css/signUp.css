@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+body{
+    box-sizing: border-box;
+    margin: 0;
+    padding:0;
+   background-color: #fdfffd;
+    
+}
+.formSignUp{
+    display: flex;
+    height: 630px;
+    width: 800px;
+    margin: auto;
+    margin-top: 10px;
+    flex-direction: column;
+    align-items: center;
+    background-color: whitesmoke;
+    box-shadow:4px 15px 50px rgb(6, 187, 45);
+    border-radius: 50px;
+}
+.formSignUp label{
+    font-family: "Monserrat", sans-serif;
+}
+
+/*Sign In header */
+.formSignUp h2{
+    font-size: 2rem;
+    font-family: "Monserrat", sans-serif;
+    color: rgb(6, 187, 45);
+}
+
+.fillIn{
+    margin-top: -10px;
+    width: 90%;
+    text-align: center;
+        font-family: "Montserrat",sans-serif;
+        font-size: 15px;
+}
+.text{
+    width:350px;
+    height:50px;
+    padding-left: 10px;
+    box-shadow:2px 6px 18px rgba(209, 139, 26, 0.3);
+    border-radius:30px;
+    display:flex;
+    align-items:center;
+    margin:10px;
+    background-color: rgb(6, 187, 45);
+}
+
+.text input{
+    height: 40px;
+    width:400px;
+    outline:none;
+    border:none;
+    font-size:16px;
+    margin:5px;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.text img{
+    margin: left 20px;
+}
+
+/*input boxes*/
+.box{
+    padding: 12px;
+    border-radius: 30px;
+    border: 1px solid rgb(6, 187, 45);
+    border-width: 1px;
+    width: 65%;
+    margin: 15px;
+    outline: none;
+    display: flex;
+    align-items: center;
+}
+.text:hover{
+    background-color: rgb(3, 156, 10);
+}
+
+.text input:focus{
+
+    background-color: rgb(236, 234, 234);
+}
+
+.pswR{
+    width: 60%;
+    height: 50px;
+    font-family: "Montserrat",sans-serif;
+    font-size: 15px;
+}
+
+.policy{
+    width: 90%;
+    text-align: center;
+    font-family: "Montserrat",sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+/*sign in submit button*/
+#signUp{
+    padding: 10px 30px;
+    width: 40%;
+    font-size: 15px;
+    font-weight: bold;
+    font-family: "Monserrat", sans-serif;
+    background:linear-gradient(-30deg, rgb(0, 114, 25), rgb(3, 243, 55)55%);
+    box-shadow:2px 6px 16px rgba(238, 169, 57, 0.3);
+    border-radius: 30px;
+    border: none;
+   margin: 10px;
+    color: white;
+}
+
+#signUp:hover{
+    cursor: pointer;
+    background:linear-gradient(-30deg, rgb(0, 114, 25), rgb(3, 243, 55)55%);
+    box-shadow:0 5px 15px rgba(52, 184, 26, 0.8);
+    transform:scale(1.1);
+
+}
+#signUp:active{
+    background:linear-gradient(-30deg, rgb(1, 170, 38), rgb(30, 252, 78)55%);
+    transform:scale(1.1);
+
+}
+
+.formSignUp a{
+    margin: 20px;
+    font-family: "Montserrat",sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    color: black;
+}
+.formSignUp a:hover{
+    color: rgba(52, 184, 26, 0.8);
+}
+
+.formSignUp a:active{
+    color: rgba(52, 184, 26, 0.8);
+}
+
+.error{
+    color: white;
+}

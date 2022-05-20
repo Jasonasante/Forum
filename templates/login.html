@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+  <link rel="stylesheet" href="/css/login.css">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,27 +8,23 @@
     <title>Login</title>
 </head>
 <body>
-    <form action="/AuthoriseLogin"  method="POST" style="border:1px solid #ccc">
-        <div class="container">
-          <h1>Log In</h1>
-          <hr>
+
+        <form action="/AuthoriseLogin"  class="form" method="POST">
+          <h2>Log In</h2>
           <label for="usernameL"><b>Username</b></label>
-          <input type="text" placeholder="Enter Username" name="usernameL" id="usernameL" required>
-          <br>
-          <br>
-          <label for="pswL"><b>Password</b></label>
-          <input type="password" placeholder="Enter Password" name="pswL" id="pswL" required > 
-          <br>
-          <br>
-          
-          <div class="clearfix">
-            <button type="submit" class="loginbtn">Log In</button>
+          <div class="text">
+            <img src="/img/user.png" height="20px"/>
+            <input type="text" placeholder="Enter Username" name="usernameL" id="usernameL" required>
           </div>
-        </div>
-      </form> 
-      <form action="/signup">
-        <p>Haven't registered?</p>
-        <button type="submit" class="signupbtn">Sign Up</button>
-    </form>
+          <label for="pswL"><b>Password</b></label>
+          <div class="text">
+            <img src="/img/password.png" height="20px"/>
+            <input type="password" placeholder="Enter Password" name="pswL" id="pswL" required > 
+          </div>    
+            <input type="submit" value="Log In" id="login"></input>
+             <a href="http://localhost:8080/signup">Sign Up Here!</a>
+        </form>
+
+
 </body>
 </html>
