@@ -4,6 +4,7 @@ body{
     margin: 0;
     padding:0;
    background-color: #fdfffd;
+
     
 }
 .formSignUp{
@@ -86,7 +87,7 @@ body{
 
 .pswR{
     width: 60%;
-    height: 50px;
+    text-align: center;
     font-family: "Montserrat",sans-serif;
     font-size: 15px;
 }
