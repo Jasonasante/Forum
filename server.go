@@ -3,6 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"forum/SQLTables/comments"
+	"forum/SQLTables/likes"
+	"forum/SQLTables/users"
 	"io/ioutil"
 	"os"
 
@@ -16,24 +19,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type User struct {
-	User  string
-	Email string
-	Fname string
-	Lname string
-	Image string
-}
+var UserTable *users.UserData
+var CommentTable *comments.CommentFields
+var LikesDislikesTable *likes.LikesData
+var LikesDislikesCommentsTable *comments.CommentFields
 
 type ErrorMes struct {
 	En interface{}
 	Em string
 }
-
-var (
-	database *sql.DB
-	stmt     *sql.Stmt
-)
 
 // this receives a password and encrypts it, protect a user's password in the database.
 func HashPassword(password string) (string, error) {
@@ -49,7 +43,7 @@ func CheckPasswordHash(password, hash string) bool {
 
 // this determines wither an E-mail exists in the database
 func emailExists(email string) bool {
-	row := database.QueryRow("SELECT email from user where email= ?", email)
+	row := UserTable.Data.QueryRow("SELECT email from user where email= ?", email)
 	temp := ""
 	row.Scan(&temp)
 	if temp != "" {
@@ -60,7 +54,7 @@ func emailExists(email string) bool {
 
 // this determines wither an username exists in the database
 func usernameExists(username string) bool {
-	row := database.QueryRow("SELECT username from user where username= ?", username)
+	row := UserTable.Data.QueryRow("SELECT username from user where username= ?", username)
 	temp := ""
 	row.Scan(&temp)
 	if temp != "" {
@@ -74,22 +68,7 @@ func signUp(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if r.URL.Path != "/signup" {
 		log.Fatal()
 	}
-
-	row, _ := database.Query("SELECT * from user")
-	for row.Next() {
-		var (
-			u string
-			e string
-			p string
-			f string
-			l string
-			i string
-		)
-
-		row.Scan(&u, &e, &p, &f, &l, &i)
-		fmt.Println("username:= " + u + " email:= " + e + " password:= " + p + " fname:= " + f + " lname:= " + l + " image:=" + i)
-	}
-
+	
 	if AlreadyLoggedIn(r) {
 		http.Redirect(w, r, "/", 302)
 		return
@@ -109,28 +88,25 @@ func avatar(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	usernameFromSignUp := (r.FormValue("username"))
 	email := template.HTMLEscapeString(r.FormValue("email"))
 	password := template.HTMLEscapeString(r.FormValue("psw"))
-	fname := template.HTMLEscapeString(r.FormValue("fname"))
-	lname := template.HTMLEscapeString(r.FormValue("lname"))
 
-	if emailExists(email) == true && usernameExists(usernameFromSignUp) == false {
+	if emailExists(email) && !usernameExists(usernameFromSignUp){
 		en := http.StatusConflict
 		em := "Uh oh Try again, email already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
-	} else if usernameExists(usernameFromSignUp) == true && emailExists(email) == false {
+	} else if usernameExists(usernameFromSignUp) && !emailExists(email){
 		en := http.StatusConflict
 		em := "Uh oh Try again, username already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
-	} else if emailExists(email) == true && usernameExists(usernameFromSignUp) == true {
+	} else if emailExists(email) && usernameExists(usernameFromSignUp) {
 		en := http.StatusConflict
 		em := "Uh oh Try again, username and email already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else {
-		stmt, _ = database.Prepare("INSERT INTO user(username,email,password, fname, lname) VALUES(?,?,?,?,?)")
 		hash, _ := HashPassword(password)
-		stmt.Exec(usernameFromSignUp, email, hash, fname, lname)
+		UserTable.Add(users.UserFields{Email: email, Username: usernameFromSignUp, Password: hash})
 		dt := time.Now()
 		fmt.Print(usernameFromSignUp, " successfully registered ")
 		fmt.Println("Access granted at", dt.String())
@@ -180,7 +156,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	session := sessions.SessionMap.Get(c.Value)
 	DpFile, err := os.Create("dp-images/" + session.Username + "-dp.png")
 	DpName := "../dp-images/" + session.Username + "-dp.png"
-	database.Exec("UPDATE user SET image = ? WHERE username = ?", DpName, session.Username)
+	UserTable.Data.Exec("UPDATE user SET image = ? WHERE username = ?", DpName, session.Username)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -221,15 +197,13 @@ func AuthoriseLogin(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 		usernameFromUserTable string
 		emailFromUserTable    string
 		hashFromUserTable     string
-		fNameFromUserTable    string
-		lNameFromUserTable    string
 		iFromUserTable        string
 	)
 
 	// this method returns a single row of the information requested within the query that corresponds with the identification key used (i.e username) if it exists
 	// It then stores the request information in the corresponding variable addresses. Once we check verify that that user exists and the passwords match,we send user to the homepage.
-	row := database.QueryRow("SELECT * from user WHERE username= ?", usernameFromLogin)
-	switch err := row.Scan(&usernameFromUserTable, &emailFromUserTable, &hashFromUserTable, &fNameFromUserTable, &lNameFromUserTable, &iFromUserTable); err {
+	row := UserTable.Data.QueryRow("SELECT * from user WHERE username= ?", usernameFromLogin)
+	switch err := row.Scan(&usernameFromUserTable, &emailFromUserTable, &hashFromUserTable, &iFromUserTable); err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
 	case nil:
@@ -297,12 +271,10 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 			userFromSession  string
 			emailFromSession string
 			hashFromSession  string
-			fNameFromSession string
-			lNameFromSession string
 			iFromSession     string
 		)
-		row := database.QueryRow("SELECT * from user WHERE username= ?", session.Username)
-		switch err := row.Scan(&userFromSession, &emailFromSession, &hashFromSession, &fNameFromSession, &lNameFromSession, &iFromSession); err {
+		row := UserTable.Data.QueryRow("SELECT * from user WHERE username= ?", session.Username)
+		switch err := row.Scan(&userFromSession, &emailFromSession, &hashFromSession, &iFromSession); err {
 		case sql.ErrNoRows:
 			fmt.Println("No rows were returned! From Session")
 		case nil:
@@ -311,9 +283,8 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 			panic(err)
 		}
 		t, _ := template.ParseFiles("./templates/homePagewithC.html")
-		t.Execute(w, User{userFromSession, emailFromSession, fNameFromSession, lNameFromSession, iFromSession})
+		t.Execute(w, users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession})
 	}
-
 }
 
 var sessUser string
@@ -333,16 +304,17 @@ func AlreadyLoggedIn(r *http.Request) bool {
 	return false
 }
 
-// this initialises a test sqlite database and creates a table containing user information.
-func TestDB() {
-	database, _ = sql.Open("sqlite3", "test.db")
-	stmt, _ = database.Prepare("CREATE TABLE IF NOT EXISTS user (username TEXT, email TEXT, password TEXT, fname TEXT, lname TEXT, image TEXT)")
-	stmt.Exec()
+//this initialises a test sqlite database and creates a table containing user information.
+func initDB() {
+	db, _ := sql.Open("sqlite3", "forumDataBase.db")
+	UserTable = users.CreateUserTable(db)
 }
 
 func main() {
-	TestDB()
+	initDB()
 	mux := http.NewServeMux()
+	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir("img"))))
+	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 	mux.Handle("/dp-images/", http.StripPrefix("/dp-images/", http.FileServer(http.Dir("./dp-images"))))
 	mux.HandleFunc("/", sessions.Middleware(MessageBoard))
 	mux.HandleFunc("/login", sessions.Middleware(logIn))
