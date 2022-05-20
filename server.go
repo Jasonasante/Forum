@@ -3,26 +3,32 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"forum/SQLTables/comments"
-	"forum/SQLTables/likes"
-	"forum/SQLTables/users"
-	"io/ioutil"
-	"os"
-
-	"forum/cookies"
-	"forum/sessions"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
+
+	users "forum/SQLTables/Users"
+	"forum/SQLTables/comments"
+	"forum/SQLTables/commentsAndLikes"
+	"forum/SQLTables/likes"
+	"forum/SQLTables/posts"
+	"forum/cookies"
+	"forum/sessions"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
-var UserTable *users.UserData
-var CommentTable *comments.CommentFields
-var LikesDislikesTable *likes.LikesData
-var LikesDislikesCommentsTable *comments.CommentFields
+
+var (
+	UserTable                  *users.UserData
+	CommentTable               *comments.CommentData
+	LikesDislikesTable         *likes.LikesData
+	LikesDislikesCommentsTable *commentsAndLikes.CommentsAndLikesData
+	PostsTable                 *posts.PostData
+)
 
 type ErrorMes struct {
 	En interface{}
@@ -68,9 +74,9 @@ func signUp(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if r.URL.Path != "/signup" {
 		log.Fatal()
 	}
-	
+
 	if AlreadyLoggedIn(r) {
-		http.Redirect(w, r, "/", 302)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 	t, _ := template.ParseFiles("./templates/signup.html")
@@ -89,18 +95,21 @@ func avatar(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	email := template.HTMLEscapeString(r.FormValue("email"))
 	password := template.HTMLEscapeString(r.FormValue("psw"))
 
-	if emailExists(email) && !usernameExists(usernameFromSignUp){
+	if emailExists(email) && !usernameExists(usernameFromSignUp) {
 		en := http.StatusConflict
+		w.WriteHeader(en)
 		em := "Uh oh Try again, email already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
-	} else if usernameExists(usernameFromSignUp) && !emailExists(email){
+	} else if usernameExists(usernameFromSignUp) && !emailExists(email) {
 		en := http.StatusConflict
+		w.WriteHeader(en)
 		em := "Uh oh Try again, username already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else if emailExists(email) && usernameExists(usernameFromSignUp) {
 		en := http.StatusConflict
+		w.WriteHeader(en)
 		em := "Uh oh Try again, username and email already exists!"
 		t, _ := template.ParseFiles("./templates/errorSignUp.html")
 		t.Execute(w, ErrorMes{En: en, Em: em})
@@ -171,8 +180,8 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	// write this byte array to our temporary file
 	DpFile.Write(fileBytes)
 	// return that we have successfully uploaded our file!
-	//fmt.Fprintf(w, "Successfully Uploaded File\n")
-	http.Redirect(w, r, "/", 302)
+	// fmt.Fprintf(w, "Successfully Uploaded File\n")
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // this sends the inputs from the log in form to the homePage handleFunc.
@@ -181,7 +190,7 @@ func logIn(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		log.Fatal()
 	}
 	if AlreadyLoggedIn(r) {
-		http.Redirect(w, r, "/", 302)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 	t, _ := template.ParseFiles("./templates/login.html")
@@ -212,9 +221,11 @@ func AuthoriseLogin(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 		panic(err)
 	}
 	if !CheckPasswordHash(passwordFromLogin, hashFromUserTable) {
+		en := http.StatusBadRequest
+		w.WriteHeader(en)
 		em := "Username or Password incorrect !! Please try again"
 		t, _ := template.ParseFiles("./templates/errorLogin.html")
-		t.Execute(w, ErrorMes{Em: em})
+		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else {
 		fmt.Print("Password Matched! Access granted. ")
 		dt := time.Now()
@@ -232,17 +243,27 @@ func AuthoriseLogin(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 			Value: "1",
 		}
 		http.SetCookie(w, cookie)
-		http.Redirect(w, r, "/", 302)
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }
 
-//this defaults the current cookie and session to say that no one is logged in and logs the user out.
+// this defaults the current cookie and session to say that no one is logged in and logs the user out.
 func Logout(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	sessions.SessionMap.Delete(s)
 	cookieLogOut, _ := r.Cookie("Maryland")
 	cookieLogOut = &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true}
 	http.SetCookie(w, cookieLogOut)
-	http.Redirect(w, r, "/", 302)
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+type Info struct {
+	Sess       *sessions.Session
+	Comments   []comments.CommentFields
+	Posts      []posts.PostFields
+	LikedPosts []posts.PostFields
+	Post       posts.PostFields
+	IsAuthor   bool
+	Error      string
 }
 
 func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
@@ -282,6 +303,13 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		default:
 			panic(err)
 		}
+		items := PostsTable.Get(LikesDislikesTable)
+		var data Info
+		data = Info{
+			Sess:  s,
+			Posts: items,
+		}
+		fmt.Println("message board", data)
 		t, _ := template.ParseFiles("./templates/homePagewithC.html")
 		t.Execute(w, users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession})
 	}
@@ -304,7 +332,244 @@ func AlreadyLoggedIn(r *http.Request) bool {
 	return false
 }
 
-//this initialises a test sqlite database and creates a table containing user information.
+// func deletePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	id := strings.TrimPrefix(r.URL.RequestURI(), "/delete?")
+// 	PostsTable.Delete(id)
+// 	http.Redirect(w, r, "/", http.StatusFound)
+// }
+
+// func savePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	if s.Username == "" {
+// 		http.Redirect(w, r, "/", http.StatusFound)
+// 	}
+
+// 	fmt.Println(r.FormValue("content"))
+// 	if r.FormValue("content") != "" {
+// 		if r.FormValue("id") != "" {
+// 			id := r.FormValue("id")
+// 			r.ParseForm()
+// 			var thread string
+// 			threadList := r.Form["thread"]
+// 			if len(threadList) > 1 {
+// 				for i, v := range threadList {
+// 					thread += v
+// 					if i != len(threadList)-1 {
+// 						thread += ":"
+// 					}
+
+// 				}
+// 			} else {
+// 				thread = threadList[0]
+// 			}
+// 			PostsTable.Update(posts.PostFields{
+// 				Content: r.FormValue("content"),
+// 				Thread:  thread,
+// 			}, id)
+// 		} else {
+// 			r.ParseForm()
+// 			var thread string
+// 			threadList := r.Form["thread"]
+// 			if len(threadList) > 1 {
+// 				for i, v := range threadList {
+// 					thread += v
+// 					if i != len(threadList)-1 {
+// 						thread += ":"
+// 					}
+
+// 				}
+// 			} else {
+// 				thread = threadList[0]
+// 			}
+
+// 			PostsTable.Add(posts.PostFields{
+// 				Id:      sessions.Generate(),
+// 				Author:  s.Username,
+// 				Content: r.FormValue("content"),
+// 				Thread:  thread,
+// 			})
+
+// 		}
+// 		http.Redirect(w, r, "/", http.StatusFound)
+// 	} else {
+// 		t, err := template.ParseFiles("template/newpost.html", "template/header.html", "template/footer.html")
+// 		if err != nil {
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+// 		data := Info{
+// 			Sess:  s,
+// 			Error: "You need to write something at least 8 symbols",
+// 			Post: posts.PostFields{
+// 				Content: r.FormValue("content"),
+// 			},
+// 		}
+// 		t.ExecuteTemplate(w, "newpost", data)
+
+// 	}
+// }
+
+// func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	if s.Username == "" {
+// 		http.Redirect(w, r, "/", http.StatusFound)
+// 	}
+// 	items := PostsTable.Get(LikesDislikesTable)
+// 	id := strings.TrimPrefix(r.URL.RequestURI(), "/edit?")
+// 	var item posts.PostFields
+
+// 	for _, v := range items {
+// 		if v.Id == id {
+// 			item = v
+// 		}
+// 	}
+// 	t, err := template.ParseFiles("template/newpost.html", "template/header.html", "template/footer.html")
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
+// 	data := Info{
+// 		Sess: s,
+// 		Post: item,
+// 	}
+// 	t.ExecuteTemplate(w, "newpost", data)
+// }
+
+// func LikeDislikecom(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	if !s.IsAuthorized {
+// 		http.Redirect(w, r, "/", http.StatusFound)
+// 		return
+// 	}
+// 	var value string
+// 	if r.URL.Path == "/likecom" {
+// 		value = "l"
+// 	} else if r.URL.Path == "/dislikecom" {
+// 		value = "d"
+// 	}
+// 	values, _ := url.ParseQuery(r.URL.RawQuery)
+// 	comid := values.Get("coid")
+// 	posid := values.Get("posid")
+// 	LikesDislikesCommentsTable.Add(commentsAndLikes.CommentsAndLikesFields{
+// 		CommentId: comid,
+// 		Username:  s.Username,
+// 		Like:      value,
+// 	})
+// 	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
+// }
+
+// func Cabinet(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	myposts, mylikes := PostsTable.GetMyPosts(LikesDislikesTable, s.Username)
+// 	data := Info{
+// 		Sess:       s,
+// 		Posts:      myposts,
+// 		LikedPosts: mylikes,
+// 	}
+// 	t, err := template.ParseFiles("template/cabinet.html", "template/header.html", "template/footer.html")
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	fmt.Println(mylikes)
+// 	t.ExecuteTemplate(w, "cabinet", data)
+// }
+
+// func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	thread := r.FormValue("thread")
+// 	p := PostsTable.Filter(LikesDislikesTable, thread)
+// 	data := Info{
+// 		Sess:  s,
+// 		Posts: p,
+// 	}
+// 	t, err := template.ParseFiles("template/posts.html", "template/header.html", "template/footer.html")
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	t.ExecuteTemplate(w, "posts", data)
+// }
+
+// func LikeDislike(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	if !s.IsAuthorized {
+// 		http.Redirect(w, r, "/", http.StatusFound)
+// 		return
+// 	}
+// 	var value string
+// 	if r.URL.Path == "/like" {
+// 		value = "l"
+// 	} else if r.URL.Path == "/dislike" {
+// 		value = "d"
+// 	}
+// 	LikesDislikesTable.Add(likes.LikesFields{
+// 		PostId:   r.FormValue("id"),
+// 		Username: s.Username,
+// 		Like:     value,
+// 	})
+// 	http.Redirect(w, r, "/", http.StatusFound)
+// }
+
+// func DelComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	values, _ := url.ParseQuery(r.URL.RawQuery)
+// 	comid := values.Get("coid")
+// 	posid := values.Get("posid")
+// 	CommentTable.Delete(comid)
+// 	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
+// }
+
+// func SaveComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	if r.FormValue("content") != "" {
+// 		CommentTable.Add(comments.CommentFields{
+// 			CommentId: sessions.Generate(),
+// 			PostId:    r.FormValue("id"),
+// 			Author:    s.Username,
+// 			Content:   r.FormValue("content"),
+// 		})
+// 	}
+
+// 	http.Redirect(w, r, "/view?id="+r.FormValue("id"), http.StatusFound)
+// }
+
+// func View(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+// 	var url string
+// 	if r.URL.Path != "/view" && s.Username != "" {
+// 		url = "comment"
+// 	} else {
+// 		url = "view"
+// 	}
+
+// 	items := PostsTable.Get(LikesDislikesTable)
+// 	// id := strings.TrimPrefix(r.URL.RequestURI(), "/"+url+"?")
+// 	id := r.FormValue("id")
+// 	var item posts.PostFields
+
+// 	for _, v := range items {
+// 		if v.Id == id {
+// 			item = v
+// 		}
+// 	}
+// 	coms := CommentTable.Get(LikesDislikesTable, id)
+// 	for i, v := range coms {
+// 		if v.Author == s.Username {
+// 			coms[i].CommentAuthor = true
+// 		}
+// 	}
+
+// 	data := Info{
+// 		Sess:     s,
+// 		Comments: coms,
+// 		Post:     item,
+// 		IsAuthor: item.Author == s.Username,
+// 	}
+
+// 	t, err := template.ParseFiles("template/comment.html", "template/view.html", "template/header.html", "template/footer.html")
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	t.ExecuteTemplate(w, url, data)
+// }
+
+// this initialises a test sqlite database and creates a table containing user information.
 func initDB() {
 	db, _ := sql.Open("sqlite3", "forumDataBase.db")
 	UserTable = users.CreateUserTable(db)
@@ -313,9 +578,25 @@ func initDB() {
 func main() {
 	initDB()
 	mux := http.NewServeMux()
+
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir("img"))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 	mux.Handle("/dp-images/", http.StripPrefix("/dp-images/", http.FileServer(http.Dir("./dp-images"))))
+	// mux.HandleFunc("/write", sessions.Middleware(newPost))
+	// mux.HandleFunc("/edit", sessions.Middleware(newPost))
+	// mux.HandleFunc("/view", sessions.Middleware(View))
+	// mux.HandleFunc("/comment", sessions.Middleware(View))
+	// mux.HandleFunc("/delete", sessions.Middleware(deletePost))
+	// mux.HandleFunc("/SavePost", sessions.Middleware(savePost))
+	// mux.HandleFunc("/savecomm", sessions.Middleware(SaveComm))
+	// mux.HandleFunc("/deleteCom", sessions.Middleware(DelComm))
+	// mux.HandleFunc("/like", sessions.Middleware(LikeDislike))
+	// mux.HandleFunc("/dislike", sessions.Middleware(LikeDislike))
+	// mux.HandleFunc("/logout", sessions.Middleware(Logout))
+	// mux.HandleFunc("/filter", sessions.Middleware(Filter))
+	// mux.HandleFunc("/cabinet", sessions.Middleware(Cabinet))
+	// mux.HandleFunc("/likecom", sessions.Middleware(LikeDislikecom))
+	// mux.HandleFunc("/dislikecom", sessions.Middleware(LikeDislikecom))
 	mux.HandleFunc("/", sessions.Middleware(MessageBoard))
 	mux.HandleFunc("/login", sessions.Middleware(logIn))
 	mux.HandleFunc("/AuthoriseLogin", sessions.Middleware(AuthoriseLogin))
