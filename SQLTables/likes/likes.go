@@ -11,11 +11,10 @@ type LikesData struct {
 
 func CreateLikesTable(db *sql.DB) *LikesData {
 	stmt, _ := db.Prepare(`
-	CREATE TABLE IF NOT EXISTS "likes"
-	"postID" TEXT NOT NULL
+	CREATE TABLE IF NOT EXISTS "likes" (
+	"postID" TEXT NOT NULL,
 	"username" TEXT NOT NULL,
 	"like" TEXT
-	
 );
 `)
 	stmt.Exec()

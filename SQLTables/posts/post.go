@@ -13,16 +13,15 @@ type PostData struct {
 
 func CreatePostTable(db *sql.DB) *PostData {
 	stmt, _ := db.Prepare(`
-	CREATE TABLE IF NOT EXSITS "posts" (
-		"id" TEXT NOT NULL UNIQUE,
-		"author" TEXT NOT NULL,
-		"content" TEXT NOT NULL
-		"thread" TEXT,
-		PRIMARY KEY("id")
+		CREATE TABLE IF NOT EXISTS "posts" (
+			"id"	TEXT NOT NULL UNIQUE,
+			"author"	TEXT NOT NULL,
+			"content"	TEXT NOT NULL,
+			"thread"	TEXT,
+			PRIMARY KEY("id")
 		);
 	`)
 	stmt.Exec()
-
 	return &PostData{
 		Data: db,
 	}
@@ -40,9 +39,7 @@ func (postData *PostData) Add(postFields PostFields) {
 
 func (posts *PostData) Get(LD *likes.LikesData) []PostFields {
 	sliceOfPostTableRows := []PostFields{}
-	rows, _ := posts.Data.Query(`
-	SELECT * FROM "posts"
-	`)
+	rows, _ := posts.Data.Query(`SELECT * FROM "posts"`)
 	var id string
 	var author string
 	var content string
@@ -52,6 +49,7 @@ func (posts *PostData) Get(LD *likes.LikesData) []PostFields {
 
 	for rows.Next() {
 		rows.Scan(&id, &author, &content, &thread, &likes, &dislikes)
+		// fmt.Println(id, author)
 		postTableRows := PostFields{
 			Id:       id,
 			Author:   author,
