@@ -28,13 +28,11 @@ func CreatePostTable(db *sql.DB) *PostData {
 }
 
 func (postData *PostData) Add(postFields PostFields) {
+	fmt.Println("Post ADD", postFields)
 	stmt, _ := postData.Data.Prepare(`INSERT into "posts" 
 	(id,author,content,thread) VALUES (?,?,?,?);`)
-	_, err := stmt.Exec(postFields.Id, postFields.Author,
-		postFields.Content, postFields.Thread)
-	if err != nil {
-		fmt.Print(err)
-	}
+	stmt.Exec(postFields.Id, postFields.Author, postFields.Content, postFields.Thread)
+
 }
 
 func (posts *PostData) Get(LD *likes.LikesData) []PostFields {
@@ -44,19 +42,17 @@ func (posts *PostData) Get(LD *likes.LikesData) []PostFields {
 	var author string
 	var content string
 	var thread string
-	var likes int
-	var dislikes int
 
 	for rows.Next() {
-		rows.Scan(&id, &author, &content, &thread, &likes, &dislikes)
+		rows.Scan(&id, &author, &content, &thread)
 		// fmt.Println(id, author)
 		postTableRows := PostFields{
 			Id:       id,
 			Author:   author,
 			Content:  content,
 			Thread:   thread,
-			Likes:    len(LD.Get(id,"l")),
-			Dislikes: len(LD.Get(id,"d")),
+			Likes:    len(LD.Get(id, "l")),
+			Dislikes: len(LD.Get(id, "d")),
 		}
 		sliceOfPostTableRows = append(sliceOfPostTableRows, postTableRows)
 	}
@@ -146,6 +142,6 @@ func (post *PostData) Delete(id string) {
 }
 
 func (post *PostData) Update(item PostFields, id string) {
-    stmt, _ := post.Data.Prepare(`UPDATE "posts" SET "content" = ?, "thread" = ? WHERE "id" = ?`)
-    stmt.Exec(item.Content, item.Thread, id)
+	stmt, _ := post.Data.Prepare(`UPDATE "posts" SET "content" = ?, "thread" = ? WHERE "id" = ?`)
+	stmt.Exec(item.Content, item.Thread, id)
 }
