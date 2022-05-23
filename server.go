@@ -251,9 +251,7 @@ func AuthoriseLogin(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 // this defaults the current cookie and session to say that no one is logged in and logs the user out.
 func Logout(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	sessions.SessionMap.Delete(s)
-	cookieLogOut, _ := r.Cookie("Maryland")
-	cookieLogOut = &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true}
-	http.SetCookie(w, cookieLogOut)
+	http.SetCookie(w, &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true})
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -265,7 +263,7 @@ type Info struct {
 	Post       posts.PostFields
 	IsAuthor   bool
 	Error      string
-	UserInfo users.UserFields
+	UserInfo   users.UserFields
 }
 
 func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
@@ -274,61 +272,62 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		return
 	}
 
+	var (
+		userFromSession  string
+		emailFromSession string
+		hashFromSession  string
+		iFromSession     string
+	)
+	row := UserTable.Data.QueryRow("SELECT * from user WHERE username= ?", s.Username)
+	switch err := row.Scan(&userFromSession, &emailFromSession, &hashFromSession, &iFromSession); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned! From Session")
+	case nil:
+		fmt.Print(userFromSession + " Info Found. ")
+	default:
+		panic(err)
+	}
+	items := PostsTable.Get(LikesDislikesTable)
+	var data Info
+	for i, v := range items {
+		if v.Author == s.Username {
+			items[i].PostAuthor = true
+		}
+	}
+	data = Info{
+		Sess:     s,
+		Posts:    items,
+		UserInfo: users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession},
+	}
+
 	cookie := cookies.FetchCookies(w, r)
 	if cookie.Value == "0" {
 		t, _ := template.ParseFiles("./templates/homePagewithoutC.html")
-		t.Execute(w, nil)
+		t.Execute(w, data)
 	}
 	if cookie.Value == "1" {
 		c, _ := r.Cookie("sessionId")
 		session := sessions.SessionMap.Get(c.Value)
 		if !session.IsAuthorized {
-			cookieReset, _ := r.Cookie("Maryland")
-			cookieReset = &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true}
-			http.SetCookie(w, cookieReset)
+			http.SetCookie(w, &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true})
 			t, _ := template.ParseFiles("./templates/homePagewithoutC.html")
 			t.Execute(w, nil)
 			return
 		}
-		var (
-			userFromSession  string
-			emailFromSession string
-			hashFromSession  string
-			iFromSession     string
-		)
-		row := UserTable.Data.QueryRow("SELECT * from user WHERE username= ?", session.Username)
-		switch err := row.Scan(&userFromSession, &emailFromSession, &hashFromSession, &iFromSession); err {
-		case sql.ErrNoRows:
-			fmt.Println("No rows were returned! From Session")
-		case nil:
-			fmt.Print(userFromSession + " Info Found. ")
-		default:
-			panic(err)
-		}
-		items := PostsTable.Get(LikesDislikesTable)
-		var data Info
-		data = Info{
-			Sess:  s,
-			Posts: items,
-			UserInfo: users.UserFields{Username: userFromSession, Email: emailFromSession, Image: iFromSession},
-		}
-		fmt.Println("message board", data)
+
+		//fmt.Println("message board", data)
 		t, _ := template.ParseFiles("./templates/homePagewithC.html")
 		t.Execute(w, data)
 	}
 }
 
-var sessUser string
-
 func AlreadyLoggedIn(r *http.Request) bool {
 	c, err := r.Cookie(sessions.COOKIE_NAME)
-	fmt.Println(c, "cookies")
+	//fmt.Println(c, "cookies")
 	if err != nil {
 		return false
 	}
-	sess, _ := sessions.SessionMap.Data[c.Value]
-	sessUser = sess.Username
-	fmt.Println(sess, "something")
+	sess := sessions.SessionMap.Data[c.Value]
 	if sess.Username != "" {
 		return true
 	}
@@ -346,7 +345,6 @@ func savePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
-	fmt.Println(r.FormValue("content"))
 	if r.FormValue("content") != "" {
 		if r.FormValue("id") != "" {
 			id := r.FormValue("id")
@@ -383,14 +381,15 @@ func savePost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 			} else {
 				thread = threadList[0]
 			}
-
+			fmt.Println("about to add 1")
 			PostsTable.Add(posts.PostFields{
 				Id:      sessions.Generate(),
 				Author:  s.Username,
 				Content: r.FormValue("content"),
 				Thread:  thread,
 			})
-
+			fmt.Println("postable", PostsTable)
+			fmt.Println(r.FormValue("content"))
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
 	} else {
@@ -423,7 +422,6 @@ func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 			item = v
 		}
 	}
-	fmt.Println("POSTs2")
 	t, err := template.ParseFiles("./templates/newpost.html")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -576,10 +574,10 @@ func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 func initDB() {
 	db, _ := sql.Open("sqlite3", "forumDataBase.db")
 	UserTable = users.CreateUserTable(db)
-	CommentTable =comments.NewCommentTable(db)
-	LikesDislikesTable= likes.CreateLikesTable(db) 
-	LikesDislikesCommentsTable= commentsAndLikes.CreateLikesAndCommentsTable(db)
-	PostsTable= posts.CreatePostTable(db)
+	CommentTable = comments.NewCommentTable(db)
+	LikesDislikesTable = likes.CreateLikesTable(db)
+	LikesDislikesCommentsTable = commentsAndLikes.CreateLikesAndCommentsTable(db)
+	PostsTable = posts.CreatePostTable(db)
 
 }
 
