@@ -17,7 +17,7 @@ type Session struct {
 	Id           string
 	Username     string
 	IsAuthorized bool
-	Expiry time.Time
+	Expiry       time.Time
 }
 
 type SessionStore struct {
@@ -81,10 +81,7 @@ func ensureSession(r *http.Request, w http.ResponseWriter) string {
 func Middleware(next func(w http.ResponseWriter, r *http.Request, s *Session)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionId := ensureSession(r, w)
-
 		session := SessionMap.Get(sessionId)
-		fmt.Println(session, "sessions")
-
 		SessionMap.Set(session)
 		next(w, r, session)
 	}
