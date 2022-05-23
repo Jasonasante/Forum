@@ -1,7 +1,6 @@
 package cookies
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -26,18 +25,18 @@ type Cookie struct {
 
 func SetCookies(w http.ResponseWriter, r *http.Request) *http.Cookie {
 	expiration := time.Now().Add(365 * 24 * time.Hour)
-	fmt.Println("helllllooooooo")
+	//fmt.Println("helllllooooooo")
 	cookie := &http.Cookie{Name: "Maryland", Value: "0", Expires: expiration, HttpOnly: true}
 	http.SetCookie(w, cookie)
-	fmt.Println("set cookie", cookie)
+	//fmt.Println("set cookie", cookie)
 	return cookie
 }
 
 func FetchCookies(w http.ResponseWriter, r *http.Request) *http.Cookie {
 	cookie, err := r.Cookie("Maryland")
-	fmt.Println("cookies:", cookie, "err:", err)
+	//fmt.Println("cookies:", cookie, "err:", err)
 	if err != nil {
-		fmt.Println("No Cookies Found")
+		//fmt.Println("No Cookies Found")
 		cookie = SetCookies(w, r)
 	}
 	return cookie
