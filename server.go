@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -453,68 +454,69 @@ func LikeDislike(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// func View(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	var url string
-// 	if r.URL.Path != "/view" && s.Username != "" {
-// 		url = "comment"
-// 	} else {
-// 		url = "view"
-// 	}
+func View(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	var url string
+	if r.URL.Path != "/view" && s.Username != "" {
+		url = "comment"
+	} else {
+		url = "view"
+	}
 
-// 	items := PostsTable.Get(LikesDislikesTable)
-// 	// id := strings.TrimPrefix(r.URL.RequestURI(), "/"+url+"?")
-// 	id := r.FormValue("id")
-// 	var item posts.PostFields
+	items := PostsTable.Get(LikesDislikesTable)
+	// id := strings.TrimPrefix(r.URL.RequestURI(), "/"+url+"?")
+	id := r.FormValue("id")
+	var item posts.PostFields
 
-// 	for _, v := range items {
-// 		if v.Id == id {
-// 			item = v
-// 		}
-// 	}
-// 	coms := CommentTable.Get(LikesDislikesTable, id)
-// 	for i, v := range coms {
-// 		if v.Author == s.Username {
-// 			coms[i].CommentAuthor = true
-// 		}
-// 	}
+	for _, v := range items {
+		if v.Id == id {
+			item = v
+		}
+	}
+	coms := CommentTable.Get(LikesDislikesCommentsTable, id)
+	for i, v := range coms {
+		if v.Author == s.Username {
+			coms[i].CommentAuthor = true
+		}
+	}
 
-// 	data := Info{
-// 		Sess:     s,
-// 		Comments: coms,
-// 		Post:     item,
-// 		IsAuthor: item.Author == s.Username,
-// 	}
+	data := Info{
+		Sess:     s,
+		Comments: coms,
+		Post:     item,
+		IsAuthor: item.Author == s.Username,
+	}
+	fmt.Println("coms--->",coms)
 
-// 	t, err := template.ParseFiles("template/comment.html", "template/view.html", "template/header.html", "template/footer.html")
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
+	t, err := template.ParseFiles("./templates/comment.html", "./templates/view.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-// 	t.ExecuteTemplate(w, url, data)
-// }
+	t.ExecuteTemplate(w, url, data)
+}
 
-// func LikeDislikecom(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	if !s.IsAuthorized {
-// 		http.Redirect(w, r, "/", http.StatusFound)
-// 		return
-// 	}
-// 	var value string
-// 	if r.URL.Path == "/likecom" {
-// 		value = "l"
-// 	} else if r.URL.Path == "/dislikecom" {
-// 		value = "d"
-// 	}
-// 	values, _ := url.ParseQuery(r.URL.RawQuery)
-// 	comid := values.Get("coid")
-// 	posid := values.Get("posid")
-// 	LikesDislikesCommentsTable.Add(commentsAndLikes.CommentsAndLikesFields{
-// 		CommentId: comid,
-// 		Username:  s.Username,
-// 		Like:      value,
-// 	})
-// 	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
-// }
+func LikeDislikecom(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	if !s.IsAuthorized {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	var value string
+	if r.URL.Path == "/likecom" {
+		value = "l"
+	} else if r.URL.Path == "/dislikecom" {
+		value = "d"
+	}
+	values, _ := url.ParseQuery(r.URL.RawQuery)
+	comid := values.Get("coid")
+	posid := values.Get("posid")
+	LikesDislikesCommentsTable.Add(commentsAndLikes.CommentsAndLikesFields{
+		CommentId: comid,
+		Username:  s.Username,
+		Like:      value,
+	})
+	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
+}
 
 // func Cabinet(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 // 	myposts, mylikes := PostsTable.GetMyPosts(LikesDislikesTable, s.Username)
@@ -533,42 +535,51 @@ func LikeDislike(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 // 	t.ExecuteTemplate(w, "cabinet", data)
 // }
 
-// func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	thread := r.FormValue("thread")
-// 	p := PostsTable.Filter(LikesDislikesTable, thread)
-// 	data := Info{
-// 		Sess:  s,
-// 		Posts: p,
-// 	}
-// 	t, err := template.ParseFiles("template/posts.html", "template/header.html", "template/footer.html")
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
+func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	thread := r.FormValue("thread")
+	if thread == "none" {
+		http.Redirect(w, r, "/", 302)
+	}
+	p := PostsTable.Filter(LikesDislikesTable, thread)
+	data := Info{
+		Sess:  s,
+		Posts: p,
+	}
+	t, err := template.ParseFiles("./templates/homePagewithoutC.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if s.Username != "" {
+		t, err = template.ParseFiles("./templates/homePagewithC.html")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+	t.Execute(w, data)
+}
 
-// 	t.ExecuteTemplate(w, "posts", data)
-// }
+func DelComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	values, _ := url.ParseQuery(r.URL.RawQuery)
+	comid := values.Get("coid")
+	posid := values.Get("posid")
+	CommentTable.Delete(comid)
+	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
+}
 
-// func DelComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	values, _ := url.ParseQuery(r.URL.RawQuery)
-// 	comid := values.Get("coid")
-// 	posid := values.Get("posid")
-// 	CommentTable.Delete(comid)
-// 	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
-// }
+func SaveComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	if r.FormValue("content") != "" {
+		CommentTable.Add(comments.CommentFields{
+			CommentId: sessions.Generate(),
+			PostId:    r.FormValue("id"),
+			Author:    s.Username,
+			Content:   r.FormValue("content"),
+		})
+	}
 
-// func SaveComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	if r.FormValue("content") != "" {
-// 		CommentTable.Add(comments.CommentFields{
-// 			CommentId: sessions.Generate(),
-// 			PostId:    r.FormValue("id"),
-// 			Author:    s.Username,
-// 			Content:   r.FormValue("content"),
-// 		})
-// 	}
-
-// 	http.Redirect(w, r, "/view?id="+r.FormValue("id"), http.StatusFound)
-// }
+	http.Redirect(w, r, "/view?id="+r.FormValue("id"), http.StatusFound)
+}
 
 // this initialises a test sqlite database and creates a table containing user information.
 func initDB() {
@@ -594,14 +605,14 @@ func main() {
 	mux.HandleFunc("/SavePost", sessions.Middleware(savePost))
 	mux.HandleFunc("/like", sessions.Middleware(LikeDislike))
 	mux.HandleFunc("/dislike", sessions.Middleware(LikeDislike))
-	// mux.HandleFunc("/view", sessions.Middleware(View))
-	// mux.HandleFunc("/comment", sessions.Middleware(View))
-	// mux.HandleFunc("/savecomm", sessions.Middleware(SaveComm))
-	// mux.HandleFunc("/deleteCom", sessions.Middleware(DelComm))
-	// mux.HandleFunc("/filter", sessions.Middleware(Filter))
+	mux.HandleFunc("/view", sessions.Middleware(View))
+	mux.HandleFunc("/comment", sessions.Middleware(View))
+	mux.HandleFunc("/savecomm", sessions.Middleware(SaveComm))
+	mux.HandleFunc("/deleteCom", sessions.Middleware(DelComm))
+	mux.HandleFunc("/filter", sessions.Middleware(Filter))
 	// mux.HandleFunc("/cabinet", sessions.Middleware(Cabinet))
-	// mux.HandleFunc("/likecom", sessions.Middleware(LikeDislikecom))
-	// mux.HandleFunc("/dislikecom", sessions.Middleware(LikeDislikecom))
+	mux.HandleFunc("/likecom", sessions.Middleware(LikeDislikecom))
+	mux.HandleFunc("/dislikecom", sessions.Middleware(LikeDislikecom))
 	mux.HandleFunc("/", sessions.Middleware(MessageBoard))
 	mux.HandleFunc("/login", sessions.Middleware(logIn))
 	mux.HandleFunc("/AuthoriseLogin", sessions.Middleware(AuthoriseLogin))

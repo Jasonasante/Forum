@@ -1,0 +1,54 @@
+{{define "view"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Comment</title>
+</head>
+<body>
+
+{{if .Post.PostAuthor}}
+<p><a href="/delete?{{.Post.Id}}">Delete</a></p>
+<p><a href="/edit?{{.Post.Id}}">Edit</a></p>
+{{end}}
+<div class="container-lg p-3 border">
+    <p>{{.Post.Content}}</p>
+</div>
+{{if .Sess.IsAuthorized}}
+<p><a href="/comment?id={{.Post.Id}}">Comment</a></p>
+{{end}}
+{{range .Comments}}
+<hr>
+{{if .CommentAuthor}}
+<div class="bot-line d-flex justify-content-end">
+
+    <a class="btn" href="/likecom?coid={{.CommentId}}&posid={{.PostId}}">
+        <i class="fas fa-thumbs-up">{{.Likes}}</i>
+    </a>
+    <a class="btn" href="/dislikecom?coid={{.CommentId}}&posid={{.PostId}}">
+        <i class="fas fa-thumbs-down">{{.Dislikes}}</i>
+    </a>
+    <p><a href="/deleteCom?coid={{.CommentId}}&posid={{.PostId}}">Delete Comment</a></p>
+</div>
+{{else}}
+<div class="bot-line d-flex justify-content-end">
+
+    <a class="btn" href="/likecom?coid={{.CommentId}}&posid={{.PostId}}">
+        <i class="fas fa-thumbs-up">{{.Likes}}</i>
+    </a>
+    <a class="btn" href="/dislikecom?coid={{.CommentId}}&posid={{.PostId}}">
+        <i class="fas fa-thumbs-down">{{.Dislikes}}</i>
+    </a>
+</div>
+{{end}}
+
+<p>{{.Author}}</p>
+<p>{{.Content}}</p>
+<hr>
+{{end}}
+
+</body>
+</html>
+{{end}}

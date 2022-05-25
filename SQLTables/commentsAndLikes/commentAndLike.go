@@ -26,11 +26,13 @@ func (likes *CommentsAndLikesData) GetOne(id, user string) CommentsAndLikesField
 			Like:      like,
 		}
 	}
+	fmt.Println("ccc", comid, "aaa", author, "lll", like)
 	rows.Close()
 	return commentsAndLikesRows
 }
 
 func (likes *CommentsAndLikesData) Add(commentLiked CommentsAndLikesFields) {
+	fmt.Println("check 1" , )
 	likedComment := likes.GetOne(commentLiked.CommentId, commentLiked.Username)
 	var s string
 	if likedComment.Like == "" {
@@ -41,8 +43,8 @@ func (likes *CommentsAndLikesData) Add(commentLiked CommentsAndLikesFields) {
 		s = "DELETE FROM likescom WHERE like = ? AND comid = ? AND username = ?"
 	}
 	stmt, _ := likes.Data.Prepare(s)
-	_, err := stmt.Exec(commentLiked.Like, commentLiked.CommentId, commentLiked.Username)
-	fmt.Println("this is the commentAndLikes database", err)
+	stmt.Exec(commentLiked.Like, commentLiked.CommentId, commentLiked.Username)
+	//fmt.Println("this is the commentAndLikes database", err)
 }
 
 func (likes *CommentsAndLikesData) Get(id, l string) []CommentsAndLikesFields {

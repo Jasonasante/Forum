@@ -3,7 +3,7 @@ package comments
 import (
 	"database/sql"
 	"fmt"
-	"forum/SQLTables/likes"
+	"forum/SQLTables/commentsAndLikes"
 )
 
 type CommentData struct {
@@ -32,7 +32,7 @@ func (comment *CommentData) Add(commentFields CommentFields) {
 	fmt.Println(err)
 }
 
-func (comment *CommentData) Get(likesData *likes.LikesData, str string) []CommentFields {
+func (comment *CommentData) Get(commentsLikesData *commentsAndLikes.CommentsAndLikesData, str string) []CommentFields {
 	s := fmt.Sprintf("SELECT * FROM comments WHERE postid = '%v'", str)
 
 	sliceOfCommentRows:= []CommentFields{}
@@ -48,8 +48,8 @@ func (comment *CommentData) Get(likesData *likes.LikesData, str string) []Commen
 			PostId:    postid,
 			Author:    author,
 			Content:   content,
-			Likes:         len(likesData.Get(commentid, "l")),
-			Dislikes:         len(likesData.Get(commentid, "d")),
+			Likes:         len(commentsLikesData.Get(commentid, "l")),
+			Dislikes:         len(commentsLikesData.Get(commentid, "d")),
 		}
 		sliceOfCommentRows = append(sliceOfCommentRows, commentRows)
 	}
