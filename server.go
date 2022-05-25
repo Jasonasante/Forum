@@ -518,22 +518,21 @@ func LikeDislikecom(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 	http.Redirect(w, r, "/view?id="+posid, http.StatusFound)
 }
 
-// func Cabinet(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-// 	myposts, mylikes := PostsTable.GetMyPosts(LikesDislikesTable, s.Username)
-// 	data := Info{
-// 		Sess:       s,
-// 		Posts:      myposts,
-// 		LikedPosts: mylikes,
-// 	}
-// 	t, err := template.ParseFiles("template/cabinet.html", "template/header.html", "template/footer.html")
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	fmt.Println(mylikes)
-// 	t.ExecuteTemplate(w, "cabinet", data)
-// }
+func Cabinet(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	myposts, mylikes := PostsTable.GetMyPosts(LikesDislikesTable, s.Username)
+	data := Info{
+		Sess:       s,
+		Posts:      myposts,
+		LikedPosts: mylikes,
+	}
+	t, err := template.ParseFiles("./templates/cabinet.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fmt.Println(mylikes)
+	t.ExecuteTemplate(w, "cabinet", data)
+}
 
 func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	thread := r.FormValue("thread")
@@ -610,7 +609,7 @@ func main() {
 	mux.HandleFunc("/savecomm", sessions.Middleware(SaveComm))
 	mux.HandleFunc("/deleteCom", sessions.Middleware(DelComm))
 	mux.HandleFunc("/filter", sessions.Middleware(Filter))
-	// mux.HandleFunc("/cabinet", sessions.Middleware(Cabinet))
+	mux.HandleFunc("/cabinet", sessions.Middleware(Cabinet))
 	mux.HandleFunc("/likecom", sessions.Middleware(LikeDislikecom))
 	mux.HandleFunc("/dislikecom", sessions.Middleware(LikeDislikecom))
 	mux.HandleFunc("/", sessions.Middleware(MessageBoard))

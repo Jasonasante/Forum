@@ -49,6 +49,7 @@
     
       </form>
     </div>
+    
     {{range .Posts}}
     <div class="row no-gutters">
       <div class="post post-header col-2">
@@ -71,9 +72,10 @@
             <a class="btn" href="/dislike?id={{.Id}}">
               <i class="fas fa-thumbs-down">{{.Dislikes}}</i>
             </a>
+            {{if .PostAuthor}}
             <a class="btn btn-secondary btn-sm" role="button" href="/delete?{{.Id}}">Delete</a>
-    
             <a class="btn btn-secondary btn-sm" role="button" href="/edit?{{.Id}}">Edit</a>
+            {{end}}
             <p>Thread: {{.Thread}}</p>
           </div>
         </div>

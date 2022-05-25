@@ -1,0 +1,87 @@
+{{define "cabinet"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+  
+<div class="container">
+  <h1>Your posts</h1>
+  {{range .Posts}}
+  <div class="row no-gutters">
+    <div class="post post-header col-2">
+      <div class="">
+        <p>{{.Author}}</p>
+      </div>
+    </div>
+    <div class="post col-10">
+      <div class="container-fluid my-3 p-3 border">
+        <div class="content">
+          {{if .Id}}
+          <p class="">{{.Content}}</p>
+          <!-- <p><a href="/view?{{.ID}}">View</a></p> -->
+          <a href="/view?id={{.Id}}">...</a>
+          {{end}}
+        </div>
+
+        <div class="bot-line d-flex justify-content-end">
+          <a class="btn" href="/like?id={{.Id}}">
+            <i class="fas fa-thumbs-up">{{.Likes}}</i>
+          </a>
+          <a class="btn" href="/dislike?id={{.Id}}">
+            <i class="fas fa-thumbs-down">{{.Dislikes}}</i>
+          </a>
+          <a class="btn btn-secondary btn-sm" role="button" href="/delete?{{.Id}}">Delete</a>
+
+          <a class="btn btn-secondary btn-sm" role="button" href="/edit?{{.Id}}">Edit</a>
+          <p>Thread: {{.Thread}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+<div class="container">
+  {{if .LikedPosts}}
+  <h1>Liked Posts</h1>
+  {{end}}
+  {{range .LikedPosts}}
+
+  <div class="row no-gutters">
+    <div class="post post-header col-2">
+      <div class="">
+        <p>{{.Author}}</p>
+      </div>
+    </div>
+    <div class="post col-10">
+      <div class="container-fluid my-3 p-3 border">
+        <div class="content">
+          {{if .Id}}
+          <p class="">{{.Content}}</p>
+          <!-- <p><a href="/view?{{.ID}}">View</a></p> -->
+          <a href="/view?id={{.Id}}">...</a>
+          {{end}}
+        </div>
+
+        <div class="bot-line d-flex justify-content-end">
+          <a class="btn" href="/like?id={{.Id}}">
+            <i class="fas fa-thumbs-up">{{.Likes}}</i>
+          </a>
+          <a class="btn" href="/dislike?id={{.Id}}">
+            <i class="fas fa-thumbs-down">{{.Dislikes}}</i>
+          </a>
+
+          <p>Thread: {{.Thread}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+</body>
+</html>
