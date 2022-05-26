@@ -37,6 +37,19 @@ type ErrorMes struct {
 	Em string
 }
 
+func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
+	w.WriteHeader(status)
+	if status == http.StatusNotFound {
+		fmt.Fprint(w, "HTTP Status 404: Page Not Found")
+	}
+	if status == http.StatusInternalServerError {
+		fmt.Fprint(w, "HTTP status 500: Internal Server Error")
+	}
+	if status == http.StatusBadRequest {
+		fmt.Fprint(w, "HTTP status 400: Bad Request. Please pick a banner, use printable characters or enter text.")
+	}
+}
+
 // this receives a password and encrypts it, protect a user's password in the database.
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -74,15 +87,19 @@ func usernameExists(username string) bool {
 // this sends the inputs in the registration from to the username handleFunc.
 func signUp(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if r.URL.Path != "/signup" {
-		log.Fatal()
+		errorHandler(w,r,http.StatusBadRequest)
 	}
 
 	if AlreadyLoggedIn(r) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-	t, _ := template.ParseFiles("./templates/signup.html")
+	t, err := template.ParseFiles("./templates/signup.html")
+	if err != nil {
+		errorHandler(w, r, http.StatusInternalServerError)
+	}
 	t.Execute(w, nil)
+
 }
 
 // this receives input from the sign up page and inserts the new user information into the database if the username and email does not exist already.
@@ -101,22 +118,34 @@ func avatar(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		en := http.StatusConflict
 		w.WriteHeader(en)
 		em := "Uh oh Try again, email already exists!"
-		t, _ := template.ParseFiles("./templates/errorSignUp.html")
+		t, err := template.ParseFiles("./templates/errorSignUp.html")
+		if err != nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else if usernameExists(usernameFromSignUp) && !emailExists(email) {
 		en := http.StatusConflict
 		w.WriteHeader(en)
 		em := "Uh oh Try again, username already exists!"
-		t, _ := template.ParseFiles("./templates/errorSignUp.html")
+		t, err := template.ParseFiles("./templates/errorSignUp.html")
+		if err != nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else if emailExists(email) && usernameExists(usernameFromSignUp) {
 		en := http.StatusConflict
 		w.WriteHeader(en)
 		em := "Uh oh Try again, username and email already exists!"
-		t, _ := template.ParseFiles("./templates/errorSignUp.html")
+		t, err := template.ParseFiles("./templates/errorSignUp.html")
+		if err != nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		t.Execute(w, ErrorMes{En: en, Em: em})
 	} else {
-		hash, _ := HashPassword(password)
+		hash, err := HashPassword(password)
+		if err != nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		UserTable.Add(users.UserFields{Email: email, Username: usernameFromSignUp, Password: hash})
 		dt := time.Now()
 		fmt.Print(usernameFromSignUp, " successfully registered ")
@@ -128,7 +157,7 @@ func avatar(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		http.SetCookie(w, cookie)
 		t, err := template.ParseFiles("./templates/avatar.html")
 		if err != nil {
-			log.Fatal()
+			errorHandler(w, r, http.StatusInternalServerError)
 		}
 		t.Execute(w, nil)
 		s.IsAuthorized = true
@@ -150,7 +179,9 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	file, handler, err := r.FormFile("myFile")
 	if err != nil {
 		fmt.Println("Error Retrieving the File")
-		fmt.Println(err)
+		if err != nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		return
 	}
 	defer file.Close()
@@ -162,14 +193,14 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	// a particular naming pattern
 	c, err := r.Cookie("sessionId")
 	if err != nil {
-		fmt.Println("11")
+		errorHandler(w, r, http.StatusInternalServerError)
 	}
 	session := sessions.SessionMap.Get(c.Value)
 	DpFile, err := os.Create("dp-images/" + session.Username + "-dp.png")
 	DpName := "../dp-images/" + session.Username + "-dp.png"
 	UserTable.Data.Exec("UPDATE user SET image = ? WHERE username = ?", DpName, session.Username)
 	if err != nil {
-		fmt.Println(err)
+			errorHandler(w, r, http.StatusInternalServerError)
 	}
 	defer DpFile.Close()
 
@@ -177,7 +208,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	// byte array
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Println(err)
+		errorHandler(w, r, http.StatusInternalServerError)
 	}
 	// write this byte array to our temporary file
 	DpFile.Write(fileBytes)
@@ -189,13 +220,16 @@ func uploadFile(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 // this sends the inputs from the log in form to the homePage handleFunc.
 func logIn(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if r.URL.Path != "/login" {
-		log.Fatal()
+		errorHandler(w, r, http.StatusBadRequest)
 	}
 	if AlreadyLoggedIn(r) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-	t, _ := template.ParseFiles("./templates/login.html")
+	t, err := template.ParseFiles("./templates/login.html")
+	if err !=nil{
+		errorHandler(w, r, http.StatusInternalServerError)
+	}
 	t.Execute(w, nil)
 }
 
@@ -269,7 +303,7 @@ type Info struct {
 
 func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if r.URL.Path != "/" {
-		w.WriteHeader(404)
+		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
 
@@ -303,28 +337,39 @@ func MessageBoard(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 
 	cookie := cookies.FetchCookies(w, r)
 	if cookie.Value == "0" {
-		t, _ := template.ParseFiles("./templates/homePagewithoutC.html")
+		t, err := template.ParseFiles("./templates/homePagewithoutC.html")
+		if err != nil{
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		t.Execute(w, data)
 	}
 	if cookie.Value == "1" {
-		c, _ := r.Cookie("sessionId")
+		c, err := r.Cookie("sessionId")
+		if err !=nil{
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		session := sessions.SessionMap.Get(c.Value)
 		if !session.IsAuthorized {
 			http.SetCookie(w, &http.Cookie{Name: "Maryland", Value: "0", Expires: time.Now().Add(365 * 24 * time.Hour), HttpOnly: true})
-			t, _ := template.ParseFiles("./templates/homePagewithoutC.html")
+			t, err := template.ParseFiles("./templates/homePagewithoutC.html")
+			if err !=nil{
+				errorHandler(w, r, http.StatusInternalServerError)
+			}
 			t.Execute(w, nil)
 			return
 		}
 
 		//fmt.Println("message board", data)
-		t, _ := template.ParseFiles("./templates/homePagewithC.html")
+		t, err := template.ParseFiles("./templates/homePagewithC.html")
+		if err !=nil {
+			errorHandler(w, r, http.StatusInternalServerError)
+		}
 		t.Execute(w, data)
 	}
 }
 
 func AlreadyLoggedIn(r *http.Request) bool {
 	c, err := r.Cookie(sessions.COOKIE_NAME)
-	//fmt.Println(c, "cookies")
 	if err != nil {
 		return false
 	}
@@ -425,7 +470,7 @@ func newPost(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	}
 	t, err := template.ParseFiles("./templates/newpost.html")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
 	data := Info{
@@ -463,7 +508,6 @@ func View(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	}
 
 	items := PostsTable.Get(LikesDislikesTable)
-	// id := strings.TrimPrefix(r.URL.RequestURI(), "/"+url+"?")
 	id := r.FormValue("id")
 	var item posts.PostFields
 
@@ -489,7 +533,7 @@ func View(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 
 	t, err := template.ParseFiles("./templates/comment.html", "./templates/view.html")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
 
@@ -546,13 +590,13 @@ func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	}
 	t, err := template.ParseFiles("./templates/homePagewithoutC.html")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
 	if s.Username != "" {
 		t, err = template.ParseFiles("./templates/homePagewithC.html")
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			errorHandler(w, r, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -560,7 +604,10 @@ func Filter(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 }
 
 func DelComm(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	values, _ := url.ParseQuery(r.URL.RawQuery)
+	values, err := url.ParseQuery(r.URL.RawQuery)
+	if err !=nil{
+		errorHandler(w, r, http.StatusInternalServerError)
+	}
 	comid := values.Get("coid")
 	posid := values.Get("posid")
 	CommentTable.Delete(comid)
@@ -622,5 +669,4 @@ func main() {
 	fmt.Println("Starting Server")
 	fmt.Println("Please open http://localhost:8080/")
 	log.Fatal(http.ListenAndServe(":8080", mux))
-	fmt.Println("error")
 }
