@@ -3,7 +3,7 @@ package comments
 import (
 	"database/sql"
 	"fmt"
-	"forum/SQLTables/commentsAndLikes"
+	"learn.01founders.co/git/gymlad/forum/SQLTables/commentsAndLikes"
 )
 
 type CommentData struct {

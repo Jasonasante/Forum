@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"forum/SQLTables/likes"
+	"learn.01founders.co/git/gymlad/forum/SQLTables/likes"
 )
 
 type PostData struct {
